@@ -114,6 +114,16 @@ if __name__ == '__main__':
                         syno = str(l.name()).replace('_', '-')
                         if syno and syno not in words_tested:
                             words_to_test.append(syno)
+                    for h in syn.hyponyms():
+                        for l in h.lemmas(lang="fra"):
+                            syno = str(l.name()).replace('_', '-')
+                            if syno and syno not in words_tested:
+                                words_to_test.append(syno)
+                    for h in syn.hypernyms():
+                        for l in h.lemmas(lang="fra"):
+                            syno = str(l.name()).replace('_', '-')
+                            if syno and syno not in words_tested:
+                                words_to_test.append(syno)
             except:
                 pass
 
@@ -142,7 +152,8 @@ if __name__ == '__main__':
 
     word, value = get_max_value(words_tested)
     tries = len(words_tested)
-    showProgress(count=value, total=1000, name=f'{word}: {(green if value == 1000 else red) + str(value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries')
+    showProgress(count=value, total=1000,
+                 name=f'{word}: {(green if value == 1000 else red) + str(value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries')
 
     saveDict()
     showRankings()
