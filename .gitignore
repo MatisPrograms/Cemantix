@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 ./Days/
-./Days/**.txt
+./Days/*.txt
