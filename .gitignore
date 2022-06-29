@@ -128,5 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-./Days/
-./Days/*.txt
+Days/
+.idea/
