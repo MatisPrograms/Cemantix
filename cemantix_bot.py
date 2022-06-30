@@ -34,6 +34,17 @@ def get_max_value(dictionary):
     return max_key, max_value
 
 
+def removeWordFromFile(file_path=fr_dict_path, word='', words=[]):
+    with open(file_path, mode="r", encoding="utf-8") as f:
+        word_list = f.read().splitlines()
+    if not word and not words:
+        word_list = list(set(word_list))
+    with open(file_path, mode="w", encoding="utf-8") as f:
+        for w in word_list:
+            if (word and w != word) or (words and w not in words):
+                f.write(w + "\n")
+
+
 def showProgress(count, total, width=25, symbol='-', name=''):
     print("\r " + green + symbol * int(count / total * width) + red + symbol * (width - int(count / total * width)) +
           reset + f" {(count / total) * 100:.2f}% " + white + (f"[{name}]" if name else name) + reset, end="",
@@ -69,6 +80,7 @@ def saveDict():
 
 def signal_handler(sig, frame):
     saveDict()
+    removeWordFromFile(words=words_not_found)
     showRankings()
     exit(0)
 
@@ -78,14 +90,14 @@ if __name__ == '__main__':
     session = requests.Session()
     words_tested = {}
     words_to_test = []
+    words_not_found = []
     last_result = {}
 
     if os.path.exists(fr_dict_path):
-        fr_words_file = open(fr_dict_path, mode="r", encoding="utf-8")
-        for line in fr_words_file.readlines():
-            if 4 < len(line) < 12:
-                words_to_test.append(line.replace("\n", ""))
-        fr_words_file.close()
+        with open(fr_dict_path, mode="r", encoding="utf-8") as f:
+            for line in f.readlines():
+                if 4 < len(line) < 15:
+                    words_to_test.append(line.replace("\n", ""))
         random.shuffle(words_to_test)
 
     if os.path.exists(today_file_path):
@@ -139,21 +151,23 @@ if __name__ == '__main__':
                             words_to_test.append(syno)
             except:
                 pass
-
+        elif 'error' in data:
+            words_not_found.append(word)
         else:
             words_tested[word] = 0.0
 
+        best_word, best_value = get_max_value(words_tested)
         showProgress(count=get_max_value(words_tested)[1], total=1000,
-                     name=f'Best: {get_max_value(words_tested)} | ' +
+                     name=('Best: {' + f'{best_word} {best_value}' + '} | ' if best_word else '') +
                           (f'Last: {last_result} | ' if last_result else '') +
                           f'{len(words_to_test)} words left | trying {word}',
                      symbol='█')
         time.sleep(random.randint(500, 1000) / 1000)
 
-    word, value = get_max_value(words_tested)
+    best_word, best_value = get_max_value(words_tested)
     tries = len(words_tested)
-    showProgress(count=value, total=1000,
-                 name=f'{word}: {(green if value == 1000 else red) + str(value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries')
+    showProgress(count=best_value, total=1000,
+                 name=f'{best_word}: {(green if best_value == 1000 else red) + str(best_value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries')
 
     saveDict()
     showRankings()
