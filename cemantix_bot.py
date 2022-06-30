@@ -106,6 +106,8 @@ if __name__ == '__main__':
     else:
         open(today_file_path, mode="w", encoding="utf-8").close()
 
+    words_to_test.append('nécessaire')
+
     while len(words_to_test) > 0 and max(words_tested.values()) < 1000.0 if words_tested else True:
         word = words_to_test.pop()
         if word.endswith('s'):
@@ -169,5 +171,4 @@ if __name__ == '__main__':
     showProgress(count=best_value, total=1000,
                  name=f'{best_word}: {(green if best_value == 1000 else red) + str(best_value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries')
 
-    saveDict()
-    showRankings()
+    signal_handler(None, None)
