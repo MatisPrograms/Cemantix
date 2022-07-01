@@ -3,6 +3,7 @@ import os
 import random
 import signal
 import time
+from datetime import datetime, timedelta
 
 import requests
 from lxml import html
@@ -18,7 +19,9 @@ white = "\033[1;37m"
 reset = "\033[0m"
 
 fr_dict_path = 'dic_fr.txt'
-today_file_path = f"Days/{time.strftime('%d-%m-%Y')}.txt"
+days_path = "Days"
+today_file_path = f"{days_path}/{datetime.strftime(datetime.now(), '%d-%m-%Y')}.txt"
+yesterday_file_path = f"{days_path}/{datetime.strftime(datetime.now() - timedelta(days=1), '%d-%m-%Y')}.txt"
 
 if not os.path.exists('Days'):
     os.makedirs('Days')
@@ -41,7 +44,7 @@ def removeWordFromFile(file_path=fr_dict_path, word='', words=[]):
         word_list = list(set(word_list))
     with open(file_path, mode="w", encoding="utf-8") as f:
         for w in word_list:
-            if (word and w != word) or (words and w not in words):
+            if (word and w != word) or (words and w not in words) or (not word and not words):
                 f.write(w + "\n")
 
 
@@ -73,6 +76,13 @@ def showRankings():
             break
 
 
+def loadDict(file_path=today_file_path):
+    if os.path.getsize(file_path) == 0:
+        return {}
+    with open(file_path, mode="r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def saveDict():
     with open(today_file_path, mode="w", encoding="utf-8") as f:
         json.dump(words_tested, f)
@@ -96,17 +106,19 @@ if __name__ == '__main__':
     if os.path.exists(fr_dict_path):
         with open(fr_dict_path, mode="r", encoding="utf-8") as f:
             for line in f.readlines():
-                if 4 < len(line) < 15:
-                    words_to_test.append(line.replace("\n", ""))
+                words_to_test.append(line.replace("\n", ""))
         random.shuffle(words_to_test)
 
     if os.path.exists(today_file_path):
-        with open(today_file_path, encoding="utf-8") as f:
-            words_tested = json.load(f)
+        words_tested = loadDict()
     else:
         open(today_file_path, mode="w", encoding="utf-8").close()
 
-    words_to_test.append('nécessaire')
+    yesterday_best_word = get_max_value(loadDict(yesterday_file_path))
+    if yesterday_best_word[1] == 1000.0:
+        res = session.post("https://cemantix.herokuapp.com/nearby", data={"word": yesterday_best_word[0]})
+        for word in reversed(list(res.json())):
+            words_to_test.append(word[0])
 
     while len(words_to_test) > 0 and max(words_tested.values()) < 1000.0 if words_tested else True:
         word = words_to_test.pop()
