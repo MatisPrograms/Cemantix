@@ -114,11 +114,12 @@ if __name__ == '__main__':
     else:
         open(today_file_path, mode="w", encoding="utf-8").close()
 
-    yesterday_best_word = get_max_value(loadDict(yesterday_file_path))
-    if yesterday_best_word[1] == 1000.0:
-        res = session.post("https://cemantix.herokuapp.com/nearby", data={"word": yesterday_best_word[0]})
-        for word in reversed(list(res.json())):
-            words_to_test.append(word[0])
+    if os.path.exists(yesterday_file_path):
+        yesterday_best_word = get_max_value(loadDict(yesterday_file_path))
+        if yesterday_best_word[1] == 1000.0:
+            res = session.post("https://cemantix.herokuapp.com/nearby", data={"word": yesterday_best_word[0]})
+            for word in reversed(list(res.json())):
+                words_to_test.append(word[0])
 
     while len(words_to_test) > 0 and max(words_tested.values()) < 1000.0 if words_tested else True:
         word = words_to_test.pop()
