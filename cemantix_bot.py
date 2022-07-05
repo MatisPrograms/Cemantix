@@ -182,6 +182,6 @@ if __name__ == '__main__':
     best_word, best_value = get_max_value(words_tested)
     tries = len(words_tested)
     showProgress(count=best_value, total=1000,
-                 name=f'{best_word}: {(green if best_value == 1000 else red) + str(best_value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries')
+                 name=f'{best_word}: {(green if best_value == 1000 else red) + str(best_value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries', symbol='█')
 
     signal_handler(None, None)
