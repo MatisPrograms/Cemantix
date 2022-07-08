@@ -121,6 +121,8 @@ if __name__ == '__main__':
             for word in reversed(list(res.json())):
                 words_to_test.append(word[0])
 
+    # words_to_test.append('')
+
     while len(words_to_test) > 0 and max(words_tested.values()) < 1000.0 if words_tested else True:
         word = words_to_test.pop()
         if word.endswith('s'):
