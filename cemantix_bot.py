@@ -54,7 +54,7 @@ def showProgress(count, total, width=25, symbol='-', name=''):
           flush=True)
 
 
-def showRankings():
+def showRankings(ranking_size=25):
     print(red + '''
 
      ▄████████   ▄▄▄▄███▄▄▄▄      ▄████████ ███▄▄▄▄       ███      ▄█  ▀████    ▐████▀         ▄████████    ▄████████ ███▄▄▄▄      ▄█   ▄█▄  ▄█  ███▄▄▄▄      ▄██████▄     ▄████████ 
@@ -71,9 +71,10 @@ def showRankings():
         ranking[word] = value
     ranking = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
     for i, (word, value) in enumerate(ranking):
-        print(f"{i + 1}. {word} - {red + str(value) + reset}")
-        if i + 1 == 20:
+        if i == ranking_size or value == 0:
             break
+        print(f"{green}{i + 1}{reset}.", word, '-',
+              f"{(red if value > 800 else yellow if value > 500 else blue) + str(value) + reset}")
 
 
 def loadDict(file_path=today_file_path):
@@ -184,6 +185,7 @@ if __name__ == '__main__':
     best_word, best_value = get_max_value(words_tested)
     tries = len(words_tested)
     showProgress(count=best_value, total=1000,
-                 name=f'{best_word}: {(green if best_value == 1000 else red) + str(best_value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries', symbol='█')
+                 name=f'{best_word}: {(green if best_value == 1000 else red) + str(best_value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries',
+                 symbol='█')
 
     signal_handler(None, None)
