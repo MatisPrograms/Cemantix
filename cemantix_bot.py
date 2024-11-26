@@ -5,7 +5,7 @@ import signal
 import time
 import argparse
 from datetime import datetime, timedelta
-
+import shutil
 import requests
 from lxml import html
 import nltk
@@ -21,6 +21,10 @@ magenta = "\033[1;35m"
 cyan = "\033[1;36m"
 white = "\033[1;37m"
 reset = "\033[0m"
+
+second = 1000
+percent = 100
+max_score = 1000.0
 
 website_url = 'https://cemantle.certitudes.org'
 headers = {"Origin": website_url, "Referer": website_url}
@@ -56,9 +60,8 @@ def removeWordFromFile(file_path=dict_path, word='', words=[]):
 
 
 def showProgress(count, total, width=25, symbol='-', name=''):
-    print("\r".ljust(100), end="", flush=True)
-    print("\r " + green + symbol * int(count / total * width) + red + symbol * (width - int(count / total * width)) +
-          reset + f" {(count / total) * 100:.2f}% " + white + (f"[{name}]" if name else name) + reset, end="")
+    line = "\r " + green + symbol * int(count / total * width) + red + symbol * (width - int(count / total * width)) + reset + f" {(count / total) * percent:.2f}% " + white + (f"[{name}]" if name else name) + reset
+    print(line.ljust(shutil.get_terminal_size().columns), end="")
 
 
 def showRankings(ranking_size=25):
@@ -81,7 +84,7 @@ def showRankings(ranking_size=25):
         if i == ranking_size or value == 0:
             break
         print(f"{green}{i + 1}{reset}.", word, '-',
-              f"{(red if value > 800 else yellow if value > 500 else blue) + str(value) + reset}")
+              f"{(red if value > (max_score * 0.8) else yellow if value > (max_score * 0.5) else blue) + str(value) + reset}")
 
 
 def loadDict(file_path=today_file_path):
@@ -128,7 +131,7 @@ if __name__ == '__main__':
 
     if os.path.exists(yesterday_file_path):
         yesterday_best_word = get_max_value(loadDict(yesterday_file_path))
-        if yesterday_best_word[1] == 1000.0:
+        if yesterday_best_word[1] == max_score:
             res = session.post(website_url + "/nearby", headers=headers, data={"word": yesterday_best_word[0]})
             for word in reversed(list(res.json())):
                 words_to_test.append(word[0])
@@ -136,7 +139,7 @@ if __name__ == '__main__':
     if args.test:
         words_to_test.append(args.test)
 
-    while len(words_to_test) > 0 and max(words_tested.values()) < 1000.0 if words_tested else True:
+    while len(words_to_test) > 0 and max(words_tested.values()) < max_score if words_tested else True:
         word = words_to_test.pop()
         
         if word.endswith('s'):
@@ -180,35 +183,23 @@ if __name__ == '__main__':
                     words_to_test.remove(lf)
                 words_to_test.append(lf)
 
-            # Using synonymo.fr to get synonyms
-            # try:
-            #     syno_res = session.post('http://www.synonymo.fr/accueil/recherche_redirect',
-            #                             data={'model': 'syno', 'syno': word})
-            #     if syno_res.content:
-            #         for element in html.fromstring(syno_res.content) \
-            #                 .xpath('//*[@id="main-container"]/div[4]/div[1]/div[2]/ul[1]')[0].getchildren():
-            #             syno = str(element.text_content().strip())
-            #             if syno and syno not in words_tested:
-            #                 words_to_test.append(syno)
-            # except:
-            #     pass
         elif 'error' in data:
             words_not_found.append(word)
         else:
             words_tested[word] = 0.0
 
         best_word, best_value = get_max_value(words_tested)
-        showProgress(count=get_max_value(words_tested)[1], total=1000,
-                     name=('Best: {' + f'{best_word} {best_value}' + '} | ' if best_word else '') +
-                          (f'Last: {last_result} | ' if last_result else '') +
-                          f'{len(words_to_test)} words left | trying {word}',
+        showProgress(count=get_max_value(words_tested)[1], total=max_score,
+                     name=('Best: ' + f'{best_word}' + ' | ' if best_word else '') +
+                          (f'Found: {list(last_result.keys())[0]} - {list(last_result.values())[0]/max_score*percent:.2f}% | ' if last_result else '') +
+                          f'Trying {word}',
                      symbol='█')
-        time.sleep(random.randint(500, 1000) / 1000)
+        time.sleep(random.randint(100, 500) / second)
 
     best_word, best_value = get_max_value(words_tested)
     tries = len(words_tested)
-    showProgress(count=best_value, total=1000,
-                 name=f'{best_word}: {(green if best_value == 1000 else red) + str(best_value) + white} | in {(green if tries < 100 else yellow if tries < 500 else red) + str(tries) + white} tries',
+    showProgress(count=best_value, total=max_score,
+                 name=f'{best_word}: {(green if best_value == max_score else red) + str(best_value) + white} | in {(green if tries < (max_score * 0.1) else yellow if tries < (max_score * 0.5) else red) + str(tries) + white} tries',
                  symbol='█')
 
     signal_handler(None, None)
