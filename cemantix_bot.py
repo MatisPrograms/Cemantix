@@ -3,11 +3,15 @@ import os
 import random
 import signal
 import time
+import argparse
 from datetime import datetime, timedelta
 
 import requests
 from lxml import html
+import nltk
 from nltk.corpus import wordnet
+
+nltk.download('wordnet')
 
 red = "\033[1;31m"
 green = "\033[1;32m"
@@ -18,7 +22,10 @@ cyan = "\033[1;36m"
 white = "\033[1;37m"
 reset = "\033[0m"
 
-fr_dict_path = 'dic_fr.txt'
+website_url = 'https://cemantle.certitudes.org'
+headers = {"Origin": website_url, "Referer": website_url}
+
+dict_path = 'dic_eng.txt'
 days_path = "Days"
 today_file_path = f"{days_path}/{datetime.strftime(datetime.now(), '%d-%m-%Y')}.txt"
 yesterday_file_path = f"{days_path}/{datetime.strftime(datetime.now() - timedelta(days=1), '%d-%m-%Y')}.txt"
@@ -37,7 +44,7 @@ def get_max_value(dictionary):
     return max_key, max_value
 
 
-def removeWordFromFile(file_path=fr_dict_path, word='', words=[]):
+def removeWordFromFile(file_path=dict_path, word='', words=[]):
     with open(file_path, mode="r", encoding="utf-8") as f:
         word_list = f.read().splitlines()
     if not word and not words:
@@ -104,8 +111,12 @@ if __name__ == '__main__':
     words_not_found = []
     last_result = {}
 
-    if os.path.exists(fr_dict_path):
-        with open(fr_dict_path, mode="r", encoding="utf-8") as f:
+    parser = argparse.ArgumentParser(description='Cemantix bot')
+    parser.add_argument('-t', '--test', help='Test a word', type=str)
+    args = parser.parse_args()
+
+    if os.path.exists(dict_path):
+        with open(dict_path, mode="r", encoding="utf-8") as f:
             for line in f.readlines():
                 words_to_test.append(line.replace("\n", ""))
         random.shuffle(words_to_test)
@@ -118,57 +129,69 @@ if __name__ == '__main__':
     if os.path.exists(yesterday_file_path):
         yesterday_best_word = get_max_value(loadDict(yesterday_file_path))
         if yesterday_best_word[1] == 1000.0:
-            res = session.post("https://cemantix.certitudes.org/nearby", data={"word": yesterday_best_word[0]})
+            res = session.post(website_url + "/nearby", headers=headers, data={"word": yesterday_best_word[0]})
             for word in reversed(list(res.json())):
                 words_to_test.append(word[0])
 
-    # words_to_test.append('')
+    if args.test:
+        words_to_test.append(args.test)
 
     while len(words_to_test) > 0 and max(words_tested.values()) < 1000.0 if words_tested else True:
         word = words_to_test.pop()
+        
         if word.endswith('s'):
             words_to_test.append(word[:-1])
         if word in words_tested:
             continue
 
-        res = session.post("https://cemantix.certitudes.org/score", data={"word": word})
+        res = session.post(website_url + "/score", headers=headers, data={"word": word})
         data = res.json() if res.content else {}
-        if 'score' in data:
-            last_result = {word: data['score']}
-            words_tested[word] = float(data['score'])
 
-            # Using nltk to get synonyms
+        if 'percentile' in data:
+            last_result = {word: data['percentile']}
+            words_tested[word] = float(data['percentile'])
+
             try:
-                for syn in wordnet.synsets(word, lang="fra"):
-                    for l in syn.lemmas(lang="fra"):
-                        syno = str(l.name()).replace('_', '-')
-                        if syno and syno not in words_tested:
-                            words_to_test.append(syno)
-                    for h in syn.hyponyms():
-                        for l in h.lemmas(lang="fra"):
-                            syno = str(l.name()).replace('_', '-')
-                            if syno and syno not in words_tested:
-                                words_to_test.append(syno)
-                    for h in syn.hypernyms():
-                        for l in h.lemmas(lang="fra"):
-                            syno = str(l.name()).replace('_', '-')
-                            if syno and syno not in words_tested:
-                                words_to_test.append(syno)
-            except:
-                pass
+                # Collect lexical field words
+                lexical_field = set()
+
+                # Get synsets (sense groupings)
+                for synset in wordnet.synsets(word, lang="eng"):
+                    # Add synonyms
+                    for lemma in synset.lemmas():
+                        lexical_field.add(lemma.name())
+                    # Add hypernyms (broader terms)
+                    for hypernym in synset.hypernyms():
+                        lexical_field.update(lemma.name() for lemma in hypernym.lemmas())
+                    # Add hyponyms (narrower terms)
+                    for hyponym in synset.hyponyms():
+                        lexical_field.update(lemma.name() for lemma in hyponym.lemmas())
+
+                lexical_field = [lf.replace('_', '-') for lf in list(lexical_field)]
+
+            except Exception as e:
+                with open('error.log', mode='a', encoding='utf-8') as f:
+                    f.write(f'{word}: {e}\n')
+
+            for lf in lexical_field:
+                if lf in words_tested:
+                    continue
+                if lf in words_to_test:
+                    words_to_test.remove(lf)
+                words_to_test.append(lf)
 
             # Using synonymo.fr to get synonyms
-            try:
-                syno_res = session.post('http://www.synonymo.fr/accueil/recherche_redirect',
-                                        data={'model': 'syno', 'syno': word})
-                if syno_res.content:
-                    for element in html.fromstring(syno_res.content) \
-                            .xpath('//*[@id="main-container"]/div[4]/div[1]/div[2]/ul[1]')[0].getchildren():
-                        syno = str(element.text_content().strip())
-                        if syno and syno not in words_tested:
-                            words_to_test.append(syno)
-            except:
-                pass
+            # try:
+            #     syno_res = session.post('http://www.synonymo.fr/accueil/recherche_redirect',
+            #                             data={'model': 'syno', 'syno': word})
+            #     if syno_res.content:
+            #         for element in html.fromstring(syno_res.content) \
+            #                 .xpath('//*[@id="main-container"]/div[4]/div[1]/div[2]/ul[1]')[0].getchildren():
+            #             syno = str(element.text_content().strip())
+            #             if syno and syno not in words_tested:
+            #                 words_to_test.append(syno)
+            # except:
+            #     pass
         elif 'error' in data:
             words_not_found.append(word)
         else:
