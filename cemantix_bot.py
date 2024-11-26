@@ -56,9 +56,9 @@ def removeWordFromFile(file_path=dict_path, word='', words=[]):
 
 
 def showProgress(count, total, width=25, symbol='-', name=''):
+    print("\r".ljust(100), end="", flush=True)
     print("\r " + green + symbol * int(count / total * width) + red + symbol * (width - int(count / total * width)) +
-          reset + f" {(count / total) * 100:.2f}% " + white + (f"[{name}]" if name else name) + reset, end="",
-          flush=True)
+          reset + f" {(count / total) * 100:.2f}% " + white + (f"[{name}]" if name else name) + reset, end="")
 
 
 def showRankings(ranking_size=25):
