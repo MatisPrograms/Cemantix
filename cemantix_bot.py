@@ -118,7 +118,7 @@ if __name__ == '__main__':
     if os.path.exists(yesterday_file_path):
         yesterday_best_word = get_max_value(loadDict(yesterday_file_path))
         if yesterday_best_word[1] == 1000.0:
-            res = session.post("https://cemantix.herokuapp.com/nearby", data={"word": yesterday_best_word[0]})
+            res = session.post("https://cemantix.certitudes.org/nearby", data={"word": yesterday_best_word[0]})
             for word in reversed(list(res.json())):
                 words_to_test.append(word[0])
 
@@ -131,11 +131,11 @@ if __name__ == '__main__':
         if word in words_tested:
             continue
 
-        res = session.post("https://cemantix.herokuapp.com/score", data={"word": word})
-        data = res.json()
-        if 'percentile' in data:
-            last_result = {word: data['percentile']}
-            words_tested[word] = float(data['percentile'])
+        res = session.post("https://cemantix.certitudes.org/score", data={"word": word})
+        data = res.json() if res.content else {}
+        if 'score' in data:
+            last_result = {word: data['score']}
+            words_tested[word] = float(data['score'])
 
             # Using nltk to get synonyms
             try:
