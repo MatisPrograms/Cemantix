@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from functools import partial
 import json
 import os
@@ -7,12 +9,13 @@ import time
 import argparse
 from datetime import datetime, timedelta
 import shutil
+from nltk.inference import resolution
 import requests
 import nltk
 from nltk.corpus import wordnet
 
-nltk.download('wordnet')
-nltk.download('omw-1.4')
+nltk.download("wordnet", quiet=True)
+nltk.download('omw-1.4', quiet=True)
 
 red = "\033[1;31m"
 green = "\033[1;32m"
@@ -88,14 +91,14 @@ def get_lexical_field(word, lang):
                 continue
 
             # Add synonyms
-            for lemma in synset.lemmas():
+            for lemma in synset.lemmas(lang=lang):
                 lexical_field.add(lemma.name())
             # Add hypernyms (broader terms)
             for hypernym in synset.hypernyms():
-                lexical_field.update(lemma.name() for lemma in hypernym.lemmas())
+                lexical_field.update(lemma.name() for lemma in hypernym.lemmas(lang=lang))
             # Add hyponyms (narrower terms)
             for hyponym in synset.hyponyms():
-                lexical_field.update(lemma.name() for lemma in hyponym.lemmas())
+                lexical_field.update(lemma.name() for lemma in hyponym.lemmas(lang=lang))
 
         lexical_field = [lf.replace('_', '-') for lf in list(lexical_field)]
 
@@ -118,17 +121,19 @@ def showRankings(ranking_size=25):
     ranking = sorted(ranking.items(), key=lambda x: x[1], reverse=True)
 
     if len(ranking):
-        print(red + '''
-
-     ▄████████   ▄▄▄▄███▄▄▄▄      ▄████████ ███▄▄▄▄       ███      ▄█  ▀████    ▐████▀         ▄████████    ▄████████ ███▄▄▄▄      ▄█   ▄█▄  ▄█  ███▄▄▄▄      ▄██████▄     ▄████████
-    ███    ███ ▄██▀▀▀███▀▀▀██▄   ███    ███ ███▀▀▀██▄ ▀█████████▄ ███    ███▌   ████▀         ███    ███   ███    ███ ███▀▀▀██▄   ███ ▄███▀ ███  ███▀▀▀██▄   ███    ███   ███    ███
-    ███    █▀  ███   ███   ███   ███    ███ ███   ███    ▀███▀▀██ ███▌    ███  ▐███           ███    ███   ███    ███ ███   ███   ███▐██▀   ███▌ ███   ███   ███    █▀    ███    █▀
-    ███        ███   ███   ███   ███    ███ ███   ███     ███   ▀ ███▌    ▀███▄███▀          ▄███▄▄▄▄██▀   ███    ███ ███   ███  ▄█████▀    ███▌ ███   ███  ▄███          ███
-    ███        ███   ███   ███ ▀███████████ ███   ███     ███     ███▌    ████▀██▄          ▀▀███▀▀▀▀▀   ▀███████████ ███   ███ ▀▀█████▄    ███▌ ███   ███ ▀▀███ ████▄  ▀███████████
-    ███    █▄  ███   ███   ███   ███    ███ ███   ███     ███     ███    ▐███  ▀███         ▀███████████   ███    ███ ███   ███   ███▐██▄   ███  ███   ███   ███    ███          ███
-    ███    ███ ███   ███   ███   ███    ███ ███   ███     ███     ███   ▄███     ███▄         ███    ███   ███    ███ ███   ███   ███ ▀███▄ ███  ███   ███   ███    ███    ▄█    ███
-    ████████▀   ▀█   ███   █▀    ███    █▀   ▀█   █▀     ▄████▀   █▀   ████       ███▄        ███    ███   ███    █▀   ▀█   █▀    ███   ▀█▀ █▀    ▀█   █▀    ████████▀   ▄████████▀
-                                                                                              ███    ███                          ▀                                                  ''' + reset)
+        result_title_length = 95
+        if shutil.get_terminal_size().columns > result_title_length:
+            print("\n" + "-" * result_title_length)
+            print(red + '''
+          _____                    __  _        ___            __    _
+         / ___/__ __ _  ___ ____  / /_(_)_ __  / _ \\___ ____  / /__ (_)__  ___ ____
+         / /__/ -_)  ' \\/ _ `/ _ \\/ __/ /\\ \\ / / , _/ _ `/ _ \\/  '_// / _ \\/ _ `(_-<
+         \\___/\\__/_/_/_/\\_,_/_//_/\\__/_//_\\_\\ /_/|_|\\_,_/_//_/_/\\_\\/_/_//_/\\_, /___/
+                                                                         /___/
+            ''' + reset)
+            print("-" * result_title_length)
+        else:
+            print("\n" + red + "Results" + reset)
 
     for i, (word, value) in enumerate(ranking):
         if i == ranking_size or value == 0:
@@ -149,9 +154,9 @@ def saveDict(file_path):
         json.dump(words_tested, f)
 
 
-def signal_handler(sig, frame, path):
+def signal_handler(sig, frame, path, words):
     saveDict(path)
-    removeWordFromFile(file_path=path, words=words_not_found)
+    removeWordFromFile(file_path=path, words=words)
     showRankings()
     exit(0)
 
@@ -175,7 +180,7 @@ if __name__ == '__main__':
     yesterday_file_path = f"{days_path}/{args.language}/{yesterday_file}"
 
     global sigterm_handler
-    signal.signal(signal.SIGINT, partial(signal_handler, path=today_file_path))
+    signal.signal(signal.SIGINT, partial(signal_handler, path=today_file_path, words=words_not_found))
 
     if os.path.exists(f"{dict_path}/{args.language}.txt"):
         with open(f"{dict_path}/{args.language}.txt", mode="r", encoding="utf-8") as f:
@@ -198,35 +203,40 @@ if __name__ == '__main__':
     if args.test:
         words_to_test.append(args.test)
 
-    while len(words_to_test) > 0 and max(words_tested.values()) < max_score if words_tested else True:
-        word = words_to_test.pop()
+    try:
+        while len(words_to_test) > 0 and max(words_tested.values()) < max_score if words_tested else True:
+            word = words_to_test.pop()
 
-        res = session.post(website_url + "/score", headers=headers, data={"word": word})
-        data = res.json() if res.content else {}
+            res = session.post(website_url + "/score", headers=headers, data={"word": word})
+            data = res.json() if res.content else {}
 
-        if 'percentile' in data:
-            last_result = {word: data['percentile']}
-            words_tested[word] = float(data['percentile'])
+            if 'percentile' in data:
+                last_result = {word: data['percentile']}
+                words_tested[word] = float(data['percentile'])
 
-            for lf in get_lexical_field(word, languages[args.language]['code']):
-                if lf in words_tested:
-                    continue
-                if lf in words_to_test:
-                    words_to_test.remove(lf)
-                words_to_test.append(lf)
+                for lf in get_lexical_field(word, languages[args.language]['code']):
+                    if lf in words_tested:
+                        continue
+                    if lf in words_to_test:
+                        words_to_test.remove(lf)
+                    words_to_test.append(lf)
 
-        elif 'error' in data:
-            words_not_found.append(word)
-        else:
-            words_tested[word] = 0.0
+            elif 'error' in data:
+                words_not_found.append(word)
+            else:
+                words_tested[word] = 0.0
 
-        best_word, best_value = get_max_value(words_tested)
-        showProgress(count=get_max_value(words_tested)[1], total=max_score,
-                     name=('Best: ' + f'{best_word}' + ' | ' if best_word else '') +
-                          (f'Found: {list(last_result.keys())[0]} - {list(last_result.values())[0]/max_score*percent:.2f}% | ' if last_result else '') +
-                          f'Trying {word}',
-                     symbol='█')
-        time.sleep(random.randint(100, 500) / second)
+            best_word, best_value = get_max_value(words_tested)
+            showProgress(count=get_max_value(words_tested)[1], total=max_score,
+                        name=('Best: ' + f'{best_word}' + ' | ' if best_word else '') +
+                            (f'Found: {list(last_result.keys())[0]} - {list(last_result.values())[0]/max_score*percent:.2f}% | ' if last_result else '') +
+                            f'Trying {word}',
+                        symbol='█')
+            time.sleep(random.randint(100, 500) / second)
+
+    except Exception as e:
+        print("\n" + red + str(e) + reset)
+        signal_handler(None, None, today_file_path, words_not_found)
 
     best_word, best_value = get_max_value(words_tested)
     tries = len(words_tested)
@@ -234,4 +244,4 @@ if __name__ == '__main__':
                  name=f'{best_word}: {(green if best_value == max_score else red) + str(best_value) + white} | in {(green if tries < (max_score * 0.1) else yellow if tries < (max_score * 0.5) else red) + str(tries) + white} tries',
                  symbol='█')
 
-    signal_handler(None, None, today_file_path)
+    signal_handler(None, None, today_file_path, words_not_found)
