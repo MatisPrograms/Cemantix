@@ -1,0 +1,35 @@
+.padding {
+    padding: 1 1;
+}
+
+.center {
+    align: center middle;
+}
+
+.outline {
+    border: solid red;
+}
+
+#buttons {
+    height: 10%;
+}
+
+#content-switcher {
+    height: 90%;
+}
+
+#guesses-container {
+    width: 30%;
+}
+
+#en-guesses-list, #fr-guesses-list {
+    height: 100%;
+}
+
+#en-submit-word, #fr-submit-word {
+    dock: right;
+}
+
+#progresion {
+    height: 90%;
+}
