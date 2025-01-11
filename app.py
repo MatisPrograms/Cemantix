@@ -264,6 +264,7 @@ class CementixApp(App):
 
     BINDINGS = [
         Binding(key="ctrl+o", action="open_website", description="Open the website"),
+        Binding(key="ctrl+s", action="save", description="save the state for all languages"),
     ]
 
     selected_language = 'en'
@@ -297,6 +298,11 @@ class CementixApp(App):
     def action_open_website(self):
         """Open the website."""
         self.app.open_url(GAME[self.selected_language]['url'])
+
+    def action_save(self):
+        """save the state for all languages."""
+        for language in GAME.keys():
+            saveState(GAME[language])
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """A coroutine to handle a button pressed event."""
