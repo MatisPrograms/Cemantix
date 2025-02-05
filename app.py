@@ -255,8 +255,8 @@ class Cementix(Static):
         markdown = f"# 🏆 {GAME[self.language]['title']} Rankings 🏆\n"
         markdown += markdown_leaderboard_header
         GAME[self.language]['markdown'] = markdown
-        self.query_one(f"#{self.prefix("guesses-list")}", Markdown).update(markdown)
-        self.query_one(f"#{self.prefix("progress-bar")}", ProgressBar).update(progress=100)
+        self.query_one(f"#{self.prefix('guesses-list')}", Markdown).update(markdown)
+        self.query_one(f"#{self.prefix('progress-bar')}", ProgressBar).update(progress=100)
 
 class CementixApp(App):
     """The main application class."""
@@ -328,7 +328,7 @@ class CementixApp(App):
             GAME[self.selected_language]['worker'].cancel()
             saveState(GAME[self.selected_language])
         elif event.button.id == self.prefix("submit-word"):
-            input = self.query_one(f"#{self.prefix("word-input")}", Input)
+            input = self.query_one(f"#{self.prefix('word-input')}", Input)
             self.submit_word(input.value, self.selected_language)
             input.value = ""
         else:
@@ -346,7 +346,7 @@ class CementixApp(App):
 
     async def on_input_submitted(self, message: Input.Submitted) -> None:
         """A coroutine to handle a text submitted message."""
-        input = self.query_one(f"#{self.prefix("word-input")}", Input)
+        input = self.query_one(f"#{self.prefix('word-input')}", Input)
         self.submit_word(input.value, self.selected_language)
         input.value = ""
 
@@ -428,7 +428,7 @@ class CementixApp(App):
         """Update the results shown."""
         markdown = GAME[self.selected_language]['markdown']
         markdown += f"{getRankings(GAME[self.selected_language]['words_tested'], ranking_size=50)}"
-        self.query_one(f"#{self.prefix("guesses-list")}", Markdown).update(markdown)
+        self.query_one(f"#{self.prefix('guesses-list')}", Markdown).update(markdown)
 
 if __name__ == "__main__":
     CementixApp().run()
