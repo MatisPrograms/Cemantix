@@ -379,9 +379,9 @@ class CementixApp(App):
             response = await client.post(f"{url}/score", headers=headers, data={"word": word})
             data = response.json() if response.content else {}
 
-            if 'percentile' in data:
-                GAME[language]['last_result'] = {word: data['percentile']}
-                GAME[language]['words_tested'][word] = float(data['percentile'])
+            if 'p' in data:
+                GAME[language]['last_result'] = {word: data['p']}
+                GAME[language]['words_tested'][word] = float(data['p'])
 
                 for w in get_lexical_field(word, GAME[language]['code']):
                     if w in GAME[language]['words_tested']:
@@ -390,7 +390,7 @@ class CementixApp(App):
                         GAME[language]['words_to_test'].remove(w)
                     GAME[language]['words_to_test'].append(w)
 
-            elif 'error' in data:
+            elif 'e' in data:
                 GAME[language]['words_not_found'].append(word)
             else:
                 GAME[language]['words_tested'][word] = 0.0
@@ -403,7 +403,7 @@ class CementixApp(App):
             response = await client.get(f"{GAME[language]['url']}")
             html = BeautifulSoup(response.content.decode("utf-8"), "html.parser")
 
-            yesterday_word = html.select('#cemantix-yesterday, #cemantle-yesterday')[0].text
+            yesterday_word = html.select('#yesterday')[0].text if html.select('#yesterday') else 'N/A'
             self.query_one(f"#{language}-yesterday-word", Label).update(f"Yesterday's word was {yesterday_word}")
             self.get_yesterdays_list(yesterday_word, language)
 

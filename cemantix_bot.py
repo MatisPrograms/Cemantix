@@ -210,9 +210,9 @@ if __name__ == '__main__':
             res = session.post(website_url + "/score", headers=headers, data={"word": word})
             data = res.json() if res.content else {}
 
-            if 'percentile' in data:
-                last_result = {word: data['percentile']}
-                words_tested[word] = float(data['percentile'])
+            if 'p' in data:
+                last_result = {word: data['p']}
+                words_tested[word] = float(data['p'])
 
                 for lf in get_lexical_field(word, languages[args.language]['code']):
                     if lf in words_tested:
@@ -221,7 +221,7 @@ if __name__ == '__main__':
                         words_to_test.remove(lf)
                     words_to_test.append(lf)
 
-            elif 'error' in data:
+            elif 'e' in data:
                 words_not_found.append(word)
             else:
                 words_tested[word] = 0.0
